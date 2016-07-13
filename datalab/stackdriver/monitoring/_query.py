@@ -23,9 +23,6 @@ import pandas
 from . import _query_results
 from . import _utils
 
-_FREQ_MAP = dict(TODAY='D', YESTERDAY='D', WEEK_TO_DATE='W', LAST_WEEK='W',
-                 MONTH_TO_DATE='MS', LAST_MONTH='MS', QUARTER_TO_DATE='QS',
-                 LAST_QUARTER='QS', YEAR_TO_DATE='AS', LAST_YEAR='AS')
 
 
 class TimeInterval(object):
@@ -40,6 +37,10 @@ class TimeInterval(object):
   LAST_QUARTER = 'LAST_QUARTER'
   YEAR_TO_DATE = 'YEAR_TO_DATE'
   LAST_YEAR = 'LAST_YEAR'
+
+  _FREQ_MAP = dict(TODAY='D', YESTERDAY='D', WEEK_TO_DATE='W', LAST_WEEK='W',
+                   MONTH_TO_DATE='MS', LAST_MONTH='MS', QUARTER_TO_DATE='QS',
+                   LAST_QUARTER='QS', YEAR_TO_DATE='AS', LAST_YEAR='AS')
 
 
 class Query(gcloud.monitoring.Query):
@@ -72,8 +73,6 @@ class Query(gcloud.monitoring.Query):
     super(Query, self).__init__(client, metric_type)
     if interval is not None:
       self._start_time, self._end_time = _get_timestamps(interval)
-
-    self._results = None
 
   def select_metric_type(self, metric_type):
     """Copy the query and update the metric type.
@@ -162,11 +161,10 @@ class Query(gcloud.monitoring.Query):
     hours = days*24 + hours
     return super(Query, self).align(per_series_aligner, seconds, minutes, hours)
 
-  def results(self, use_cache=True, use_short_name=True):
+  def results(self, use_short_name=True):
     """Retrieves results for the query.
 
     Args:
-      use_cache: Whether to use cached results or not.
       use_short_name: Whether to use a shortened form of the metric_type.
     Returns:
       A QueryResults object containing the results.
@@ -174,12 +172,7 @@ class Query(gcloud.monitoring.Query):
     name = self.metric_type
     if use_short_name:
       name = name.split('/')[-1]
-    if not use_cache or self._results is None:
-      self._results = _query_results.QueryResults(
-          self.as_dataframe(), name)
-    else:
-      self._results.metric_type = name
-    return self._results
+    return _query_results.QueryResults(self.as_dataframe(), name)
 
   def labels_as_dataframe(self):
     """Returns the resource and metric metadata as a dataframe.
@@ -218,16 +211,20 @@ def _get_utcnow():
 def _get_timestamps(interval):
   """Returns the start and end datetime objects given the interval name."""
   interval = interval.upper()
-  freq = _FREQ_MAP.get(interval)
+  freq = TimeInterval._FREQ_MAP.get(interval)
   if freq is None:
     raise ValueError('"interval" does not have a valid value')
 
   to_offset = pandas.tseries.frequencies.to_offset
   now = _get_utcnow()
   today = now.replace(hour=0, minute=0)
+
+  # Beginning of the current period with the provided frequency.
+  curr_period_begin = (today - to_offset(freq)).to_datetime()
+
+  # When calculating an interval extending till now, set end_time to utcnow.
   ends_now = interval.endswith('_TO_DATE') or interval == TimeInterval.TODAY
   end_time = now if ends_now else None
-  curr_period_begin = (today - to_offset(freq)).to_datetime()
 
   if interval == TimeInterval.TODAY:
     start_time = today
