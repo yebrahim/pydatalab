@@ -208,7 +208,7 @@ class QueryResults(object):
   def sqrt(self):
     return self._unary_operation('sqrt')
 
-  def timesplit(self, freq, use_average=False):
+  def timesplit(self, freq, use_average=False, min_points=2):
     """Split's the result based on the specified frequency
 
     Args:
@@ -218,10 +218,13 @@ class QueryResults(object):
      use_average: If True, it takes an average over the previous intervals, so
        the latest interval (say week) can be compared to the average of the past
        intervals.
+     min_points: The minimum number of points to have in the last interval. It
+       is useful in dropping the single point that is created by end_time
+       spanning across two intervals.
 
     Returns:
       A list of QueryResults split based on the input frequency. All the results
-      after the 1st one are time-shifted so as to be aligned with it.
+      except the last one are time-shifted so as to be aligned with it.
     """
     if self.empty:
       return []
@@ -250,7 +253,6 @@ class QueryResults(object):
       # If not on the boundary, move the start time back.
       first_start_time -= offset
 
-    last_start_time = None
     new_start_time = first_start_time
 
     # Split the dataframe into the required intervals.
@@ -259,9 +261,14 @@ class QueryResults(object):
       new_start_time += offset
       end_time = new_start_time - one_ns
       new_df = self._dataframe[start_time: end_time]
-      last_start_time = new_df.index[0]
       split_dataframes.append(new_df)
 
+    if len(split_dataframes[-1].index) < min_points:
+      split_dataframes = split_dataframes[:-1]
+    if not split_dataframes:
+      return []
+
+    last_start_time = split_dataframes[-1].index[0]
     # Time shift the dataframes to line up with the last dataframe.
     for i, df in enumerate(split_dataframes[:-1]):
       split_dataframes[i] = df.tshift(freq=last_start_time - df.index[0])
@@ -280,8 +287,7 @@ class QueryResults(object):
       # Collect all the dataframes for old intervals, and take their mean.
       concat_df = pandas.concat(other_dataframes)
       aggregated_df = concat_df.groupby(level=0).mean()
-      new_metric_type = 'Avg of previous %d %d-%s invervals' % (
-          len(other_dataframes), freq_count, freq_name)
+      new_metric_type = 'Avg of previous %d intervals' % len(other_dataframes)
       results.append(QueryResults(aggregated_df, new_metric_type))
     else:
       for i, df in enumerate(other_dataframes):

@@ -134,19 +134,23 @@ def heatmap(dataframe, levels=None, zrange=None, colorscale=None,
   if 'size' not in kwargs['font']:
     kwargs['font']['size'] = 10
 
-  # Adjust the left margin based on the size of the longest column label.
+  # Adjust the right margin based on the size of the longest column label.
   if 'margin' not in kwargs:
     kwargs['margin'] = {}
-  if 'l' not in kwargs['margin']:
-    kwargs['margin']['l'] = 0.65 * kwargs['font']['size'] * max([
+  if 'r' not in kwargs['margin']:
+    kwargs['margin']['r'] = 0.7 * kwargs['font']['size'] * max([
         len(col) for col in dataframe.columns])
+
+  # Move the y-axis labels to the right, and the colorbar to the left.
+  kwargs['yaxis'] = dict(side='right')
 
   zrange = zrange or (dataframe.min().min(), dataframe.max().max())
   colorscale = _get_colorscale(
       colorscale, is_divergent, is_logscale, zrange)
   heatmap_data = go.Heatmap(
       z=dataframe.T.values.tolist(), x=dataframe.index, y=dataframe.columns,
-      colorscale=colorscale, zauto=False, zmin=zrange[0], zmax=zrange[1])
+      colorscale=colorscale, zauto=False, zmin=zrange[0], zmax=zrange[1],
+      colorbar=dict(x=-0.2))
 
   fig = go.Figure(data=[heatmap_data], layout=go.Layout(**kwargs))
   py.iplot(fig, show_link=False)
