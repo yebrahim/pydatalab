@@ -20,6 +20,7 @@ import dateutil
 import gcloud.monitoring
 import pandas
 
+from . import _query_metadata
 from . import _query_results
 from . import _utils
 
@@ -161,6 +162,10 @@ class Query(gcloud.monitoring.Query):
     hours = days*24 + hours
     return super(Query, self).align(per_series_aligner, seconds, minutes, hours)
 
+  def metadata(self):
+    """Retrieves the metadata for the query."""
+    return _query_metadata.QueryMetadata(self)
+
   def results(self, use_short_name=True):
     """Retrieves results for the query.
 
@@ -173,37 +178,6 @@ class Query(gcloud.monitoring.Query):
     if use_short_name:
       name = name.split('/')[-1]
     return _query_results.QueryResults(self.as_dataframe(), name)
-
-  def labels_as_dataframe(self):
-    """Returns the resource and metric metadata as a dataframe.
-
-    Returns:
-      A pandas dataframe containing the resource type and resource and metric
-      labels. Each row in this dataframe corresponds to the metadata from one
-      time series.
-    """
-    headers = [{'resource': ts.resource.__dict__, 'metric': ts.metric.__dict__}
-               for ts in self.iter(headers_only=True)]
-    if not headers:
-      return pandas.DataFrame()
-    df = pandas.io.json.json_normalize(headers)
-
-    # Add a 2 level column header.
-    df.columns = pandas.MultiIndex.from_tuples(
-        [col.rsplit('.', 1) for col in df.columns])
-
-    # Re-order the columns.
-    resource_keys = gcloud.monitoring._dataframe._sorted_resource_labels(
-        df['resource.labels'].columns)
-    sorted_columns = [('metric', 'type'), ('resource', 'type')]
-    sorted_columns += sorted(col for col in df.columns
-                             if col[0] == 'metric.labels')
-    sorted_columns += [('resource.labels', key) for key in resource_keys]
-    df = df[sorted_columns]
-
-    # Sort the data, and clean up index values, and NaNs.
-    df = df.sort_values(sorted_columns).reset_index(drop=True).fillna('')
-    return df
 
 def _get_utcnow():
   return datetime.datetime.utcnow().replace(second=0, microsecond=0)

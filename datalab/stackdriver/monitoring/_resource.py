@@ -22,22 +22,30 @@ from . import _utils
 class ResourceDescriptors(object):
   """ResourceDescriptors object for retrieving the resource descriptors."""
 
-  def __init__(self, filter_string=None,
+  def __init__(self, filter_string=None, types=None,
                project_id=None, context=None):
     """Initializes the ResourceDescriptors based on the specified filters.
 
     Args:
       filter_string: An optional filter expression describing the resource
         descriptors to be returned.
+      types: A list of resource types to return the descriptors for.
       project_id: An optional project ID or number to override the one provided
           by the context.
       context: An optional Context object to use instead of the global default.
 
     Returns:
       A list of resource descriptor instances.
+
+    Raises:
+      ValueError: If both filter_string and types is specified.
     """
+    if not(filter_string is None or types is None):
+      raise ValueError('At most one of "filter_string" and "types" can be '
+                       'specified')
     self._client = _utils.make_client(project_id, context)
     self._filter_string = filter_string
+    self._resource_types = types
     self._descriptors = None
 
   def list(self, pattern='*'):
@@ -50,6 +58,9 @@ class ResourceDescriptors(object):
     if self._descriptors is None:
       self._descriptors = self._client.list_resource_descriptors(
           self._filter_string)
+      if self._resource_types:
+        self._descriptors = [descriptor for descriptor in self._descriptors
+                             if descriptor.type in self._resource_types]
     return [resource for resource in self._descriptors
             if fnmatch.fnmatch(resource.type, pattern)]
 
