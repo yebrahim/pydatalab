@@ -134,12 +134,15 @@ def heatmap(dataframe, levels=None, zrange=None, colorscale=None,
   if 'size' not in kwargs['font']:
     kwargs['font']['size'] = 10
 
-  # Adjust the right margin based on the size of the longest column label.
   if 'margin' not in kwargs:
     kwargs['margin'] = {}
+  # Adjust the right margin based on the size of the longest column label.
   if 'r' not in kwargs['margin']:
     kwargs['margin']['r'] = 0.7 * kwargs['font']['size'] * max([
         len(col) for col in dataframe.columns])
+  # Make the top and bottom margins smaller.
+  kwargs['margin']['t'] = kwargs['margin'].get('t') or 80
+  kwargs['margin']['b'] = kwargs['margin'].get('b') or 20
 
   # Move the y-axis labels to the right, and the colorbar to the left.
   kwargs['yaxis'] = dict(side='right')
@@ -176,8 +179,13 @@ def linechart(dataframe, levels=None, **kwargs):
   dataframe = dataframe.reindex_axis(
       dataframe.max().sort_values(ascending=False).index, axis=1)
 
+  # Make the chart height, and top/bottom margins smaller.
   if 'height' not in kwargs:
-    kwargs['height'] = 600
+    kwargs['height'] = 350
+  if 'margin' not in kwargs:
+    kwargs['margin'] = {}
+  kwargs['margin']['t'] = kwargs['margin'].get('t') or 80
+  kwargs['margin']['b'] = kwargs['margin'].get('b') or 20
 
   data = [go.Scatter(x=dataframe.index, y=dataframe[col], name=col)
           for col in dataframe.columns]
