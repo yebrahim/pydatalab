@@ -117,9 +117,9 @@ class Query(gcloud.monitoring.Query):
         Defaults to the current time.
       start_time: The start time as a string or Python datetime object.
         Defaults to None.
-      offset: The offset from the end_time. This is specified as a pandas
-        offset alias as shown here:
-       http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+      offset: The offset from the end_time. This can be specified as a
+        Python timedelta object or a pandas offset alias string:
+        http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
     Returns:
       The new query object.
@@ -133,7 +133,7 @@ class Query(gcloud.monitoring.Query):
     if offset is None:
       start_time = _parse_timestamp(start_time)
     else:
-      start_time = end_time - pandas.tseries.frequencies.to_offset(offset)
+      start_time = _subtract_offset(end_time, offset)
     return super(Query, self).select_interval(end_time, start_time)
 
   def align(self, per_series_aligner, seconds=0, minutes=0, hours=0, days=0):
@@ -179,22 +179,23 @@ class Query(gcloud.monitoring.Query):
       name = name.split('/')[-1]
     return _query_results.QueryResults(self.as_dataframe(), name)
 
+
 def _get_utcnow():
   return datetime.datetime.utcnow().replace(second=0, microsecond=0)
+
 
 def _get_timestamps(interval):
   """Returns the start and end datetime objects given the interval name."""
   interval = interval.upper()
-  freq = TimeInterval._FREQ_MAP.get(interval)
-  if freq is None:
+  offset = TimeInterval._FREQ_MAP.get(interval)
+  if offset is None:
     raise ValueError('"interval" does not have a valid value')
 
-  to_offset = pandas.tseries.frequencies.to_offset
   now = _get_utcnow()
   today = now.replace(hour=0, minute=0)
 
   # Beginning of the current period with the provided frequency.
-  curr_period_begin = (today - to_offset(freq)).to_datetime()
+  curr_period_begin = _subtract_offset(today, offset)
 
   # When calculating an interval extending till now, set end_time to utcnow.
   ends_now = interval.endswith('_TO_DATE') or interval == TimeInterval.TODAY
@@ -210,9 +211,15 @@ def _get_timestamps(interval):
       start_time = curr_period_begin
     else:
       end_time = curr_period_begin
-      start_time = (end_time - to_offset(freq)).to_datetime()
+      start_time = _subtract_offset(end_time, offset)
 
   return start_time, end_time
+
+
+def _subtract_offset(end_time, offset):
+  """Returns the result of substracting an offset from a datetime object"""
+  start_time = end_time - pandas.tseries.frequencies.to_offset(offset)
+  return start_time.to_datetime()
 
 
 def _parse_timestamp(timestamp, default_now=False):
