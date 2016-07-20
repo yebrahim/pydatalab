@@ -10,56 +10,42 @@
 # or implied.  See the License for the specific language governing permissions and limitations under
 # the License.
 
-"""Provides the ResourceDescriptors in the monitoring API."""
+"""Groups for the Google Monitoring API."""
 
 from __future__ import absolute_import
 
 import collections
 import fnmatch
 
+from . import _impl
 from . import _utils
 
-class ResourceDescriptors(object):
-  """ResourceDescriptors object for retrieving the resource descriptors."""
 
-  def __init__(self, filter_string=None, types=None,
-               project_id=None, context=None):
-    """Initializes the ResourceDescriptors based on the specified filters.
+class Groups(object):
+  """Represents a list of Stackdriver groups for a project."""
+
+  def __init__(self, project_id=None, context=None):
+    """Initializes the Groups based on the specified filters.
 
     Args:
-      filter_string: An optional filter expression describing the resource
-        descriptors to be returned.
-      types: A list of resource types to return the descriptors for.
       project_id: An optional project ID or number to override the one provided
           by the context.
       context: An optional Context object to use instead of the global default.
-
-    Raises:
-      ValueError: If both filter_string and types is specified.
     """
-    if not(filter_string is None or types is None):
-      raise ValueError('At most one of "filter_string" and "types" can be '
-                       'specified')
     self._client = _utils.make_client(project_id, context)
-    self._filter_string = filter_string
-    self._resource_types = types
-    self._descriptors = None
+    self._groups = None
 
   def list(self, pattern='*'):
-    """Returns a list of resource descriptors that match the filters.
+    """Returns a list of groups that match the filters.
 
     Args:
-      pattern: An optional pattern to further filter the descriptors. This can
-        include Unix shell-style wildcards. E.g. "aws*", "*cluster*".
+      pattern: An optional pattern to filter the groups based on their display
+        name. This can include Unix shell-style wildcards. E.g. "Production*".
     """
-    if self._descriptors is None:
-      self._descriptors = self._client.list_resource_descriptors(
-          self._filter_string)
-      if self._resource_types:
-        self._descriptors = [descriptor for descriptor in self._descriptors
-                             if descriptor.type in self._resource_types]
-    return [resource for resource in self._descriptors
-            if fnmatch.fnmatch(resource.type, pattern)]
+    if self._groups is None:
+      self._groups = _impl.Group.list(self._client)
+    return [group for group in self._groups
+            if fnmatch.fnmatch(group.display_name, pattern)]
 
   def table(self, pattern='*', max_rows=-1):
     """Visualize the matching descriptors as an HTML table.
@@ -74,13 +60,16 @@ class ResourceDescriptors(object):
     import datalab.utils.commands
 
     data = []
-    for i, resource in enumerate(self.list(pattern)):
+    for i, group in enumerate(self.list(pattern)):
       if max_rows >= 0 and i >= max_rows:
         break
       data.append(
           collections.OrderedDict([
-              ('Resource type', resource.type),
-              ('Labels', ', '. join([l.key for l in resource.labels])),
+              ('Group ID', group.group_id),
+              ('Display name', group.display_name),
+              ('Filter', group.filter),
+              ('Is cluster', group.is_cluster),
+              ('Parent ID', group.parent_id),
           ])
       )
     return IPython.core.display.HTML(

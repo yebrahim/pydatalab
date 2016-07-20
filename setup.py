@@ -36,6 +36,7 @@ setup(
     'datalab.stackdriver',
     'datalab.stackdriver.commands',
     'datalab.stackdriver.monitoring',
+    'datalab.stackdriver.monitoring._impl',
     'datalab.storage',
     'datalab.storage.commands',
     'datalab.utils',

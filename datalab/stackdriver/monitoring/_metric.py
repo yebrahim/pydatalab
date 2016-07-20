@@ -35,9 +35,6 @@ class MetricDescriptors(object):
       project_id: An optional project ID or number to override the one provided
           by the context.
       context: An optional Context object to use instead of the global default.
-
-    Returns:
-      A list of metric descriptor instances.
     """
     self._client = _utils.make_client(project_id, context)
     self._filter_string = filter_string

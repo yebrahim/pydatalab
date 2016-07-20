@@ -10,15 +10,8 @@
 # or implied.  See the License for the specific language governing permissions and limitations under
 # the License.
 
-"""Google Cloud Platform library - Monitoring Functionality."""
+"""Google Monitoring API V3."""
 
 from __future__ import absolute_import
 
-from gcloud.monitoring import Aligner, Reducer
-from ._groups import Groups
-from ._metric import MetricDescriptors
-from ._query import Query, TimeInterval
-from ._query_metadata import QueryMetadata
-from ._query_results import QueryResults
-from ._resource import ResourceDescriptors
-from ._visualization import plot_query_results
+from .group import Group

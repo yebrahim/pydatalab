@@ -13,6 +13,7 @@
 """Provides access to metric data as pandas dataframes."""
 
 from __future__ import absolute_import
+from past.builtins import basestring
 
 import datetime
 import dateutil
