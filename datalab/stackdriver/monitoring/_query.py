@@ -21,6 +21,9 @@ import dateutil
 import gcloud.monitoring
 import pandas
 
+import datalab.context
+
+from . import _groups
 from . import _query_metadata
 from . import _query_results
 from . import _utils
@@ -71,7 +74,9 @@ class Query(gcloud.monitoring.Query):
     Raises:
       ValueError: "interval" does not have a valid value.
     """
-    client = _utils.make_client(project_id, context)
+    self._context = context or datalab.context.Context.default()
+    self._project_id = project_id or self._context.project_id
+    client = _utils.make_client(self._project_id, self._context)
     super(Query, self).__init__(client, metric_type)
     if interval is not None:
       self._start_time, self._end_time = _get_timestamps(interval)
@@ -162,6 +167,41 @@ class Query(gcloud.monitoring.Query):
     """
     hours = days*24 + hours
     return super(Query, self).align(per_series_aligner, seconds, minutes, hours)
+
+  def select_group(self, group_id=None, display_name=None):
+    """Copies the query and adds filtering by group.
+
+    Exactly one of group_id and display_name must be specified.
+
+    Args:
+      group_id: The ID of a group to filter by.
+      display_name: The display name of a group to filter by. If this is
+          specified, information about the available groups is retrieved
+          from the service to allow the group ID to be determined.
+
+    Returns:
+      The new Query object.
+
+    Raises:
+      ValueError: The given display name did not match exactly one group.
+    """
+    if group_id is None and display_name is None:
+      raise ValueError('Pass only one of "group_id" and "display_name".')
+
+    if group_id is not None and display_name is not None:
+      raise ValueError('Pass only one of "group_id" and "display_name".')
+
+    if display_name is not None:
+      all_groups = _groups.Groups(self._project_id, self._context)
+      matching_groups = all_groups.list(display_name)
+      num_matches = len(matching_groups)
+      if num_matches != 1:
+        raise ValueError('{} groups have the display_name {}.'.format(
+            num_matches, display_name))
+
+      group_id = matching_groups[0].group_id
+
+    return super(Query, self).select_group(group_id)
 
   def metadata(self):
     """Retrieves the metadata for the query."""

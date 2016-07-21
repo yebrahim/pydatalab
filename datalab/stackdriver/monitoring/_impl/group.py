@@ -95,6 +95,12 @@ class Group(object):
     """
     self.client.connection.api_request(method='DELETE', path=self.path)
 
+  def parent(self):
+    """Returns the parent group of this group."""
+    if not self.parent_name:
+      return None
+    return self._fetch(self.client, self.parent_id)
+
   def children(self):
     """Lists all children of this group.
 

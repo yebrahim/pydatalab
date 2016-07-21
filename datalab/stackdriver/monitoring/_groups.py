@@ -33,7 +33,7 @@ class Groups(object):
       context: An optional Context object to use instead of the global default.
     """
     self._client = _utils.make_client(project_id, context)
-    self._groups = None
+    self._group_dict = None
 
   def list(self, pattern='*'):
     """Returns a list of groups that match the filters.
@@ -42,9 +42,11 @@ class Groups(object):
       pattern: An optional pattern to filter the groups based on their display
         name. This can include Unix shell-style wildcards. E.g. "Production*".
     """
-    if self._groups is None:
-      self._groups = _impl.Group.list(self._client)
-    return [group for group in self._groups
+    if self._group_dict is None:
+      self._group_dict = {
+          group.name: group for group in _impl.Group.list(self._client)}
+
+    return [group for group in self._group_dict.itervalues()
             if fnmatch.fnmatch(group.display_name, pattern)]
 
   def table(self, pattern='*', max_rows=-1):
@@ -63,13 +65,17 @@ class Groups(object):
     for i, group in enumerate(self.list(pattern)):
       if max_rows >= 0 and i >= max_rows:
         break
+
+      parent = self._group_dict.get(group.parent_name)
+      parent_display_name = '' if parent is None else parent.display_name
       data.append(
           collections.OrderedDict([
               ('Group ID', group.group_id),
-              ('Display name', group.display_name),
-              ('Filter', group.filter),
-              ('Is cluster', group.is_cluster),
+              ('Group Name', group.display_name),
               ('Parent ID', group.parent_id),
+              ('Parent Name', parent_display_name),
+              ('Is Cluster', group.is_cluster),
+              ('Filter', group.filter),
           ])
       )
     return IPython.core.display.HTML(
