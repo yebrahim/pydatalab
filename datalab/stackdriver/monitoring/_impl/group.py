@@ -57,6 +57,14 @@ class Group(object):
         ' is_cluster={is_cluster!r}>'
     ).format(**self.__dict__)
 
+  def __hash__(self):
+    if not self.name:
+      return TypeError('A group with no name is unhashable')
+    return hash(self.name)
+
+  def __eq__(self, other):
+    return isinstance(other, Group) and self.__hash__() == other.__hash__()
+
   @property
   def group_id(self):
     """The ID of  the group."""
@@ -297,7 +305,7 @@ class Group(object):
         A ``dict`` parsed from the JSON wire-format representation.
     """
     self.name = info['name']
-    self.display_name = info.get('displayName', '')
+    self.display_name = info['displayName']
     self.parent_name = info.get('parentName', '')
     self.filter = info['filter']
     self.is_cluster = info.get('isCluster', False)

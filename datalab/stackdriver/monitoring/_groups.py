@@ -17,8 +17,29 @@ from __future__ import absolute_import
 import collections
 import fnmatch
 
+import pandas
+
+from gcloud.monitoring import Resource
+
 from . import _impl
 from . import _utils
+
+
+def _resource_hash(resource):
+  """Returns a hash for a Resource object."""
+  elements = frozenset([('type', resource.type)] + resource.labels.items())
+  return hash(elements)
+
+
+def _resource_eq(resource1, resource2):
+  """Compares two resources for equality."""
+  return (isinstance(resource2, Resource) and
+          resource1.__hash__() == resource2.__hash__())
+
+
+Resource.__hash__ = _resource_hash
+Resource.__eq__ = _resource_eq
+_Node = collections.namedtuple('_Node', ('entity_id', 'parent_id', 'is_leaf'))
 
 
 class Groups(object):
@@ -33,7 +54,9 @@ class Groups(object):
       context: An optional Context object to use instead of the global default.
     """
     self._client = _utils.make_client(project_id, context)
+    self._project_id = self._client.project
     self._group_dict = None
+    self._group_to_members = None
 
   def list(self, pattern='*'):
     """Returns a list of groups that match the filters.
@@ -44,7 +67,7 @@ class Groups(object):
     """
     if self._group_dict is None:
       self._group_dict = {
-          group.name: group for group in _impl.Group.list(self._client)}
+          group.group_id: group for group in _impl.Group.list(self._client)}
 
     return [group for group in self._group_dict.itervalues()
             if fnmatch.fnmatch(group.display_name, pattern)]
@@ -66,7 +89,7 @@ class Groups(object):
       if max_rows >= 0 and i >= max_rows:
         break
 
-      parent = self._group_dict.get(group.parent_name)
+      parent = self._group_dict.get(group.parent_id)
       parent_display_name = '' if parent is None else parent.display_name
       data.append(
           collections.OrderedDict([
@@ -80,3 +103,63 @@ class Groups(object):
       )
     return IPython.core.display.HTML(
         datalab.utils.commands.HtmlBuilder.render_table(data))
+
+  def hierarchy(self, with_members=True):
+    """Creates a dataframe with the group hierarchy in the project."""
+    hierarchy_rows = [_Node(entity_id=self._project_id, parent_id=None,
+                            is_leaf=0)]
+    for group_id, group in self._group_dict.iteritems():
+      parent_id = self._group_display_id(group.parent_id) or self._project_id
+      entity_id = self._group_display_id(group_id)
+      hierarchy_rows.append(
+          _Node(entity_id=entity_id, parent_id=parent_id, is_leaf=0))
+
+    if with_members:
+      for group_id, members in self.membership_map().iteritems():
+        parent_id = self._group_display_id(group_id)
+        for resource in members:
+          entity_id = self._resource_display_id(group_id, resource)
+          hierarchy_rows.append(
+              _Node(entity_id=entity_id, parent_id=parent_id, is_leaf=1))
+    return pandas.DataFrame.from_records(hierarchy_rows, columns=_Node._fields)
+
+  def membership_map(self):
+    """Returns group members after removing duplicates from ancestor groups."""
+    if self._group_to_members is None:
+      member_dict = {group_id: set(group.members())
+                     for group_id, group in self._group_dict.iteritems()}
+      processed_groups = set()
+      for group_id in self._group_dict:
+        self._update_ancestors(member_dict, group_id, processed_groups)
+
+      self._group_to_members = member_dict
+
+    return self._group_to_members
+
+  def _group_display_id(self, group_id):
+    group = self._group_dict.get(group_id)
+    if group is None:
+      return group_id
+    return '%s (%s)' % (group.display_name, group_id)
+
+  @staticmethod
+  def _resource_display_id(group_id, resource):
+    """Returns a unique ID for a resource and parent group combination"""
+    labels = ', '.join(resource.labels.itervalues())
+    return '%s: %s (%s)' % (resource.type, labels, group_id)
+
+  def _update_ancestors(self, member_dict, current_group_id, processed_groups):
+    """Recursively update all ancestor groups of the current group."""
+    current_group = self._group_dict[current_group_id]
+    if not current_group.parent_name or current_group_id in processed_groups:
+      return
+
+    # Recursively call the method on the ancestors.
+    parent_id = current_group.parent_id
+    self._update_ancestors(member_dict, parent_id, processed_groups)
+
+    # Update the members of the parent by removing overlapping members.
+    member_dict[parent_id] -= member_dict[current_group_id]
+    processed_groups.add(current_group_id)
+
+
