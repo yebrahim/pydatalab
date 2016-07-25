@@ -13,6 +13,7 @@
 """Provides the ResourceDescriptors in the monitoring API."""
 
 from __future__ import absolute_import
+from builtins import object
 
 import collections
 import fnmatch
@@ -51,6 +52,9 @@ class ResourceDescriptors(object):
     Args:
       pattern: An optional pattern to further filter the descriptors. This can
         include Unix shell-style wildcards. E.g. "aws*", "*cluster*".
+
+    Returns:
+      A list of ResourceDescriptor objects that match the filters.
     """
     if self._descriptors is None:
       self._descriptors = self._client.list_resource_descriptors(
@@ -69,6 +73,9 @@ class ResourceDescriptors(object):
         include Unix shell-style wildcards. E.g. "aws*", "*cluster*".
       max_rows: The maximum number of rows (timestamps) to display. A value less
         than 0 shows all rows.
+
+    Returns:
+      The HTML rendering for a table of matching resource descriptors.
     """
     import IPython.core.display
     import datalab.utils.commands

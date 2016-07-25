@@ -41,6 +41,7 @@ def _dedup_columns(columns):
 
 def extract_single_level(dataframe, levels=None):
   """Returns a new dataframe with a single level of column header.
+     The columns are reordered to have the headers in an alphabetical order.
 
   Args:
     dataframe: The pandas DataFrame object that we do the manipulation on.
@@ -48,11 +49,10 @@ def extract_single_level(dataframe, levels=None):
 
   Returns:
     A new pandas dataframe with the same data as the input dataframe, but with
-    a single level for the column header. If a single level is specified, then
-    that level becomes the new single level column header. Otherwise, two or
-    more levels are combined using ', ' as a separator in the order specified.
-
-    Note: Columns are reordered to have the headers in an alphabetical order.
+        a single level for the column header. If a single level is specified,
+        then that level becomes the new single level column header. Otherwise,
+        two or more levels are combined using ', ' as a separator in the order
+        specified.
   """
   df_single = extract_levels(dataframe, levels)
 
@@ -65,6 +65,7 @@ def extract_single_level(dataframe, levels=None):
 
 def extract_levels(dataframe, levels=None):
   """Returns a new dataframe with the column headers of interest for a user.
+    The columns are reordered to have the headers in an alphabetical order.
 
   Args:
     dataframe: The pandas DataFrame object that we do the manipulation on.
@@ -72,11 +73,9 @@ def extract_levels(dataframe, levels=None):
 
   Returns:
     A new pandas dataframe with the same data as the input dataframe, but with
-    only the levels that the user specifies. If one or more levels specified
-    by the user do not exist in the input dataframe, then they will be inserted,
-    and the values will be the empty string.
-
-    Note: Columns are reordered to have the headers in an alphabetical order.
+        only the levels that the user specifies. If one or more levels specified
+        by the user do not exist in the input dataframe, then they will be
+        inserted, and the values will be the empty string.
   """
   levels = _utils.listify(levels)
   df_mult = dataframe.copy()

@@ -13,6 +13,7 @@
 """Provides the MetricDescriptors in the monitoring API."""
 
 from __future__ import absolute_import
+from builtins import object
 
 import collections
 import fnmatch
@@ -47,6 +48,9 @@ class MetricDescriptors(object):
     Args:
       pattern: An optional pattern to further filter the descriptors. This can
         include Unix shell-style wildcards. E.g. compute*, */cpu/load_??m'.
+
+    Returns:
+      A list of MetricDescriptor objects that match the filters.
     """
     if self._descriptors is None:
       self._descriptors = self._client.list_metric_descriptors(
@@ -62,6 +66,9 @@ class MetricDescriptors(object):
         include Unix shell-style wildcards. E.g. compute*, */cpu/load_??m'.
       max_rows: The maximum number of rows (timestamps) to display. A value less
         than 0 shows all rows.
+
+    Returns:
+      The HTML rendering for a table of matching metric descriptors.
     """
     import IPython.core.display
     import datalab.utils.commands

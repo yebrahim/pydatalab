@@ -14,6 +14,8 @@
 
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import object
 
 import gcloud.monitoring
 import pandas
@@ -62,7 +64,7 @@ class QueryMetadata(object):
 
     Args:
       max_rows: The maximum number of rows to display. Defaults to -1 which
-        shows all the data.
+          shows all the data.
     """
     import IPython.display
     IPython.display.display(self._dataframe.head(max_rows))

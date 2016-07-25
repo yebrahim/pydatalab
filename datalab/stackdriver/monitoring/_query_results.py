@@ -13,7 +13,9 @@
 """QueryResults object with visualization methods."""
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 from past.builtins import basestring
+from builtins import object
 
 import operator
 import re
@@ -86,7 +88,7 @@ class QueryResults(object):
 
     Args:
       max_rows: The maximum number of rows (timestamps) to display. Defaults to
-        -1 which shows all the data.
+          -1 which shows all the data.
     """
     import IPython.display
     IPython.display.display(self._dataframe.head(max_rows))
@@ -212,19 +214,19 @@ class QueryResults(object):
     """Split's the result based on the specified frequency
 
     Args:
-     freq: The frequency at which to split the query results. It borrows its
-       format from pandas Offset Aliases, but is restricted to:
-       [H, D, W, M, Q, A]. For 1 day, 'D'/'1D' will work fine.
-     use_average: If True, it takes an average over the previous intervals, so
-       the latest interval (say week) can be compared to the average of the past
-       intervals.
-     min_points: The minimum number of points to have in the last interval. It
-       is useful in dropping the single point that is created by end_time
-       spanning across two intervals.
+      freq: The frequency at which to split the query results. It borrows its
+          format from pandas Offset Aliases, but is restricted to:
+          [H, D, W, M, Q, A]. For 1 day, 'D'/'1D' will work fine.
+      use_average: If True, it takes an average over the previous intervals, so
+          the latest interval (say week) can be compared to the average of the
+          past intervals.
+      min_points: The minimum number of points to have in the last interval. It
+          is useful in dropping the single point that is created by end_time
+          spanning across two intervals.
 
     Returns:
       A list of QueryResults split based on the input frequency. All the results
-      except the last one are time-shifted so as to be aligned with it.
+          except the last one are time-shifted so as to be aligned with it.
     """
     if self.empty:
       return []
@@ -321,14 +323,14 @@ class QueryResults(object):
     Args:
       by: A header level in the data over which to aggregate. E.g. zone.
       func: A function to find an aggregate over the values at a given time.
-       numpy functions can be passed by name, e.g. "mean", "std", etc. Defaults
-       to numpy.mean.
+          numpy functions can be passed by name, e.g. "mean", "std", etc.
+          Defaults to numpy.mean.
       func_name: Name of the function to use to assign the metric type of the
-        new QueryResults - this is useful when passing in a lambda function.
+          new QueryResults - this is useful when passing in a lambda function.
 
     Returns:
       A new QueryResults with only the specified level in its column header, and
-      with the aggregate for the specified time at each row.
+          with the aggregate for the specified time at each row.
     """
     if isinstance(func, basestring):
       func_name = func_name or func
@@ -400,9 +402,9 @@ class QueryResults(object):
     Args:
       count: The number of top results to pick. Defaults to 5.
       percentage: The percentage of top results to pick. When both percentage
-        and count are specified, the percentage is used.
+          and count are specified, the percentage is used.
      aggregation: A numpy aggregation method as a string (e.g. "std", "min") or
-       a function (numpy.std, numpy.min). Defaults to "mean".
+         a function (numpy.std, numpy.min). Defaults to "mean".
 
     Returns:
       A new QueryResults with only the top timeseries columns.
@@ -415,9 +417,9 @@ class QueryResults(object):
     Args:
       count: The number of bottom results to pick. Defaults to 5.
       percentage: The percentage of bottom results to pick. When both
-        percentage and count are specified, the percentage is used.
+          percentage and count are specified, the percentage is used.
      aggregation: A numpy aggregation method as a string (e.g. "std", "min") or
-       a function (numpy.std, numpy.min). Defaults to "mean".
+         a function (numpy.std, numpy.min). Defaults to "mean".
 
     Returns:
       A new QueryResults with only the top timeseries columns.
@@ -429,11 +431,11 @@ class QueryResults(object):
 
     Args:
       partition_by: One or more labels to partition the results into separate
-        linecharts. It can be a string or a list. Defaults to 'metric_type'.
+          linecharts. It can be a string or a list. Defaults to 'metric_type'.
       annotate_by: One or more labels to aggregate and annotate each linechart
-        by. It can be a string or a list/tuple.
+          by. It can be a string or a list/tuple.
       **kwargs: Any arguments to pass in to the layout engine
-        plotly.graph_objs.Layout().
+          plotly.graph_objs.Layout().
     """
     _visualization.plot_query_results(
         self, 'linechart', partition_by, annotate_by, **kwargs)
@@ -445,20 +447,20 @@ class QueryResults(object):
 
     Args:
       partition_by: One or more labels to partition the results into separate
-        heatmaps. It can be a string or a list. Defaults to 'metric_type'.
+          heatmaps. It can be a string or a list. Defaults to 'metric_type'.
       annotate_by: One or more labels to aggregate and annotate each heatmap
-        by. It can be a string or a list/tuple.
+          by. It can be a string or a list/tuple.
       zrange: A list or tuple of length 2 numbers containing the range to use
-        for the colormap. If not specified, then it is calculated from the
-        dataframe.
+          for the colormap. If not specified, then it is calculated from the
+          dataframe.
       colorscale: str, A colorscale supported by matplotlib. See:
-        http://matplotlib.org/examples/color/colormaps_reference.html
+          http://matplotlib.org/examples/color/colormaps_reference.html
       is_logscale: boolean, if True, then a logarithmic colorscale is used.
       is_divergent: boolean, specifies if the data has diverging values. If
-        False, we check if the data diverges around 0, and use an appropriate
-        default colormap. Ignored if you specify the colormap.
+          False, we check if the data diverges around 0, and use an appropriate
+          default colormap. Ignored if you specify the colormap.
       **kwargs: Any arguments to pass in to the layout engine
-        plotly.graph_objs.Layout().
+          plotly.graph_objs.Layout().
     """
     _visualization.plot_query_results(
         self, 'heatmap', partition_by, annotate_by, zrange=zrange,

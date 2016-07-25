@@ -66,7 +66,7 @@ class Query(gcloud.monitoring.Query):
           please note that this default value is provided only for
           demonstration purposes and is subject to change.
       interval: Time interval for the timeseries. For example:
-        TimeInterval.TODAY. Defaults to None.
+          TimeInterval.TODAY. Defaults to None.
       project_id: An optional project ID or number to override the one provided
           by the context.
       context: An optional Context object to use instead of the global default.
@@ -120,12 +120,12 @@ class Query(gcloud.monitoring.Query):
 
     Args:
       end_time: The end time as a string or Python datetime object.
-        Defaults to the current time.
+          Defaults to the current time.
       start_time: The start time as a string or Python datetime object.
-        Defaults to None.
+          Defaults to None.
       offset: The offset from the end_time. This can be specified as a
-        Python timedelta object or a pandas offset alias string:
-        http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+          Python timedelta object or a pandas offset alias string:
+          http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
     Returns:
       The new query object.
@@ -156,7 +156,7 @@ class Query(gcloud.monitoring.Query):
 
     Args:
       per_series_aligner: The approach to be used to align individual time
-        series. For example: Aligner.ALIGN_MEAN.
+          series. For example: Aligner.ALIGN_MEAN.
       seconds: The number of seconds in the alignment period.
       minutes: The number of minutes in the alignment period.
       hours: The number of hours in the alignment period.
