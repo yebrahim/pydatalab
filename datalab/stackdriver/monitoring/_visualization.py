@@ -93,23 +93,25 @@ def _get_colorscale(colorscale=None, is_divergent=False, is_logscale=False,
   return rgb_colormap
 
 
-def heatmap(dataframe, levels=None, zrange=None, colorscale=None,
-            is_logscale=False, is_divergent=False, **kwargs):
+def heatmap(dataframe, levels=None, sort_legend=True, zrange=None,
+            colorscale=None, is_logscale=False, is_divergent=False, **kwargs):
   """Draws a plotly heatmap for the specified dataframe.
 
   Args:
     dataframe: The pandas DataFrame object to draw as a heatmap.
     levels: A list of one or more levels of column header to pick.
+    sort_legend: Iff True, the rows are sorted so that the annotation is
+        lexicographically sorted.
     zrange: A list or tuple of length 2 numbers containing the range to use for
-      the colormap. If not specified, then it is calculated from the dataframe.
+        the colormap. If not specified, it is calculated from the dataframe.
     colorscale: str, A colorscale supported by matplotlib. See:
-      http://matplotlib.org/examples/color/colormaps_reference.html
+        http://matplotlib.org/examples/color/colormaps_reference.html
     is_logscale: boolean, if True, then a logarithmic colorscale is used.
     is_divergent: boolean, specifies if the data has diverging values. If
-      False, we check if the data diverges around 0, and use an appropriate
-      default colormap. Ignored if you specify the colormap.
+        False, we check if the data diverges around 0, and use an appropriate
+        default colormap. Ignored if you specify the colormap.
     **kwargs: Any arguments to pass in to the layout engine
-      plotly.graph_objs.Layout().
+        plotly.graph_objs.Layout().
   """
   py.init_notebook_mode()
 
@@ -122,7 +124,11 @@ def heatmap(dataframe, levels=None, zrange=None, colorscale=None,
     dataframe = dataframe_utils.extract_single_level(
         dataframe.T, levels).T
 
-  dataframe = dataframe_utils.extract_single_level(dataframe, levels)
+  dataframe = dataframe_utils.extract_single_level(
+      dataframe, levels, sort_legend)
+
+  # Reverse the columns since in heatmap the first column is at the bottom.
+  dataframe = dataframe[dataframe.columns[::-1]]
 
   # Make the heatmap taller.
   if 'height' not in kwargs:
@@ -159,25 +165,28 @@ def heatmap(dataframe, levels=None, zrange=None, colorscale=None,
   py.iplot(fig, show_link=False)
 
 
-def linechart(dataframe, levels=None, **kwargs):
+def linechart(dataframe, levels=None, sort_legend=True, **kwargs):
   """Draws a plotly linechart for the specified dataframe.
 
   Args:
     dataframe: The pandas DataFrame object to draw as a linechart.
     levels: A list of one or more levels of column header to pick.
+    sort_legend: Iff True, the linechart legend is sorted by max of a
+        timeseries.
     **kwargs: Any arguments to pass in to the layout engine
-      plotly.graph_objs.Layout().
+        plotly.graph_objs.Layout().
   """
   py.init_notebook_mode()
 
   if dataframe is None or dataframe.empty:
     return
 
-  dataframe = dataframe_utils.extract_single_level(dataframe, levels)
+  dataframe = dataframe_utils.extract_single_level(dataframe, levels, False)
 
   # Re-order the columns in descending order by their max.
-  dataframe = dataframe.reindex_axis(
-      dataframe.max().sort_values(ascending=False).index, axis=1)
+  if sort_legend:
+    dataframe = dataframe.reindex_axis(
+        dataframe.max().sort_values(ascending=False).index, axis=1)
 
   # Make the chart height, and top/bottom margins smaller.
   if 'height' not in kwargs:
@@ -197,7 +206,7 @@ _ALL_PLOT_KINDS = ('linechart', 'heatmap')
 
 
 def plot_query_results(query_results, kind='linechart', partition_by=None,
-                       annotate_by=None, **kwargs):
+                       annotate_by=None, sort_legend=True, **kwargs):
   """Draws a plotly chart for one or more QueryResults objects.
 
   Args:
@@ -207,6 +216,7 @@ def plot_query_results(query_results, kind='linechart', partition_by=None,
       charts. It can be a string or a list/tuple.
     annotate_by: One or more labels to aggregate and annotate each chart by.
       It can be a string or a list/tuple.
+    sort_legend: Iff True, the legend is sorted.
     **kwargs: Keyword arguments to pass in to the underlying visualization.
 
   Raises:
@@ -270,6 +280,6 @@ def plot_query_results(query_results, kind='linechart', partition_by=None,
 
     # Call the appropriate visualization function.
     thismodule = sys.modules[__name__]
-    getattr(thismodule, kind)(dataframe, levels=annotate_by, title=title,
-                              **kwargs)
+    getattr(thismodule, kind)(dataframe, levels=annotate_by,
+                              sort_legend=sort_legend, title=title, **kwargs)
 

@@ -426,7 +426,8 @@ class QueryResults(object):
     """
     return self._top_sorted(count, percentage, aggregation, is_top=False)
 
-  def linechart(self, partition_by=None, annotate_by=None, **kwargs):
+  def linechart(self, partition_by=None, annotate_by=None, sort_legend=True,
+                **kwargs):
     """Draws a plotly linechart for this QueryResults.
 
     Args:
@@ -434,13 +435,15 @@ class QueryResults(object):
           linecharts. It can be a string or a list. Defaults to 'metric_type'.
       annotate_by: One or more labels to aggregate and annotate each linechart
           by. It can be a string or a list/tuple.
+      sort_legend: Iff True, the linechart legend is sorted by max of a
+          timeseries.
       **kwargs: Any arguments to pass in to the layout engine
           plotly.graph_objs.Layout().
     """
     _visualization.plot_query_results(
-        self, 'linechart', partition_by, annotate_by, **kwargs)
+        self, 'linechart', partition_by, annotate_by, sort_legend, **kwargs)
 
-  def heatmap(self, partition_by=None, annotate_by=None,
+  def heatmap(self, partition_by=None, annotate_by=None, sort_legend=True,
               zrange=None, colorscale=None, is_logscale=False,
               is_divergent=False, **kwargs):
     """Draws a plotly heatmap for this QueryResults.
@@ -450,6 +453,8 @@ class QueryResults(object):
           heatmaps. It can be a string or a list. Defaults to 'metric_type'.
       annotate_by: One or more labels to aggregate and annotate each heatmap
           by. It can be a string or a list/tuple.
+      sort_legend: Iff True, the rows are sorted so that the annotation is
+          lexicographically sorted.
       zrange: A list or tuple of length 2 numbers containing the range to use
           for the colormap. If not specified, then it is calculated from the
           dataframe.
@@ -463,6 +468,6 @@ class QueryResults(object):
           plotly.graph_objs.Layout().
     """
     _visualization.plot_query_results(
-        self, 'heatmap', partition_by, annotate_by, zrange=zrange,
+        self, 'heatmap', partition_by, annotate_by, sort_legend, zrange=zrange,
         colorscale=colorscale, is_logscale=is_logscale,
         is_divergent=is_divergent, **kwargs)

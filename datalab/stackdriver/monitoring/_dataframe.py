@@ -39,13 +39,14 @@ def _dedup_columns(columns):
   return deduped_columns
 
 
-def extract_single_level(dataframe, levels=None):
+def extract_single_level(dataframe, levels=None, sort_columns=True):
   """Returns a new dataframe with a single level of column header.
      The columns are reordered to have the headers in an alphabetical order.
 
   Args:
     dataframe: The pandas DataFrame object that we do the manipulation on.
     levels: A list of one or more levels of column header to pick.
+    sort_columns: Iff True, the resulting columns are sorted alphabetically.
 
   Returns:
     A new pandas dataframe with the same data as the input dataframe, but with
@@ -54,7 +55,7 @@ def extract_single_level(dataframe, levels=None):
         two or more levels are combined using ', ' as a separator in the order
         specified.
   """
-  df_single = extract_levels(dataframe, levels)
+  df_single = extract_levels(dataframe, levels, sort_columns)
 
   if len(df_single.columns.names) > 1:
     df_single.columns = [', '.join(map(str, col))
@@ -63,13 +64,14 @@ def extract_single_level(dataframe, levels=None):
   return df_single
 
 
-def extract_levels(dataframe, levels=None):
+def extract_levels(dataframe, levels=None, sort_columns=True):
   """Returns a new dataframe with the column headers of interest for a user.
     The columns are reordered to have the headers in an alphabetical order.
 
   Args:
     dataframe: The pandas DataFrame object that we do the manipulation on.
     levels: A list of one or more levels of column header to pick.
+    sort_columns: Iff True, the resulting columns are lexicographically sorted.
 
   Returns:
     A new pandas dataframe with the same data as the input dataframe, but with
@@ -97,7 +99,10 @@ def extract_levels(dataframe, levels=None):
     df_mult.columns = pandas.MultiIndex.from_arrays(
         df_headers.T.values, names=df_headers.columns.tolist())
 
-  return df_mult.sort_index(axis=1)
+  if sort_columns:
+    df_mult = df_mult.sort_index(axis=1)
+
+  return df_mult
 
 
 def add_level(dataframe, level, level_name=None):
