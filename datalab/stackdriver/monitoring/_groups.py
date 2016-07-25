@@ -13,33 +13,23 @@
 """Groups for the Google Monitoring API."""
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import object
 
 import collections
 import fnmatch
+import re
 
 import pandas
 
-from gcloud.monitoring import Resource
+import datalab.context
 
 from . import _impl
 from . import _utils
 
 
-def _resource_hash(resource):
-  """Returns a hash for a Resource object."""
-  elements = frozenset([('type', resource.type)] + resource.labels.items())
-  return hash(elements)
-
-
-def _resource_eq(resource1, resource2):
-  """Compares two resources for equality."""
-  return (isinstance(resource2, Resource) and
-          resource1.__hash__() == resource2.__hash__())
-
-
-Resource.__hash__ = _resource_hash
-Resource.__eq__ = _resource_eq
-_Node = collections.namedtuple('_Node', ('entity_id', 'parent_id', 'is_leaf'))
+_Node = collections.namedtuple('_Node',
+                               ('entity_id', 'parent_id', 'size', 'metric'))
 
 
 class Groups(object):
@@ -53,17 +43,20 @@ class Groups(object):
           by the context.
       context: An optional Context object to use instead of the global default.
     """
+    self._context = context or datalab.context.Context.default()
+    self._project_id = project_id or self._context.project_id
     self._client = _utils.make_client(project_id, context)
-    self._project_id = self._client.project
     self._group_dict = None
-    self._group_to_members = None
 
   def list(self, pattern='*'):
     """Returns a list of groups that match the filters.
 
     Args:
       pattern: An optional pattern to filter the groups based on their display
-        name. This can include Unix shell-style wildcards. E.g. "Production*".
+          name. This can include Unix shell-style wildcards. E.g. "Production*".
+
+    Returns:
+      A list of Group objects that match the filters.
     """
     if self._group_dict is None:
       self._group_dict = {
@@ -77,9 +70,12 @@ class Groups(object):
 
     Args:
       pattern: An optional pattern to further filter the descriptors. This can
-        include Unix shell-style wildcards. E.g. "aws*", "*cluster*".
+          include Unix shell-style wildcards. E.g. "aws*", "*cluster*".
       max_rows: The maximum number of rows (timestamps) to display. A value less
-        than 0 shows all rows.
+          than 0 shows all rows.
+
+    Returns:
+      The HTML rendering for a table of matching metric descriptors.
     """
     import IPython.core.display
     import datalab.utils.commands
@@ -104,62 +100,79 @@ class Groups(object):
     return IPython.core.display.HTML(
         datalab.utils.commands.HtmlBuilder.render_table(data))
 
-  def hierarchy(self, with_members=True):
-    """Creates a dataframe with the group hierarchy in the project."""
+  def treemap(self, metric_type=None, offset='1h'):
+    """Draws a treemap with the group hierarchy in the project.
+
+    Args:
+      metric_type: An optional metric type that assigns color to the treemap
+          cells.
+      offset: The offset from the current time to use for the time interval of
+          the metric query. This can be specified as a Python timedelta object or a
+          pandas offset alias string:
+      http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+
+    Returns:
+      The HTML rendering of a treemap.
+    """
+    import datalab.utils.commands
+
+    dataframe = self._hierarchy(metric_type, offset).fillna(0)
+    properties = dict(height=500, maxPostDepth=1,
+                      minColor='green', midColor='yellow', maxColor='red')
+    prop = re.sub(r'[\'{}]', '', str(properties)).replace(', ', '\n')
+
+    return datalab.utils.commands._chart._chart_cell({
+        'chart': 'treemap',
+        'data': dataframe,
+        'fields': ','.join(dataframe.columns)
+    }, prop)
+
+  def _hierarchy(self, metric_type=None, offset='1h'):
+    """Returns a dataframe with the group hierarchy of the project. """
+    query = None
+    if metric_type is not None:
+      query = self._build_query(metric_type, offset)
+
     hierarchy_rows = [_Node(entity_id=self._project_id, parent_id=None,
-                            is_leaf=0)]
+                            size=0, metric=0)]
     for group_id, group in self._group_dict.iteritems():
       parent_id = self._group_display_id(group.parent_id) or self._project_id
       entity_id = self._group_display_id(group_id)
+      if metric_type is not None:
+        dataframe = query.select_group(group_id).as_dataframe()
+        metric = dataframe.mean().mean()
+      else:
+        metric = 0
       hierarchy_rows.append(
-          _Node(entity_id=entity_id, parent_id=parent_id, is_leaf=0))
+          _Node(entity_id=entity_id, parent_id=parent_id, size=1,
+                metric=metric))
 
-    if with_members:
-      for group_id, members in self.membership_map().iteritems():
-        parent_id = self._group_display_id(group_id)
-        for resource in members:
-          entity_id = self._resource_display_id(group_id, resource)
-          hierarchy_rows.append(
-              _Node(entity_id=entity_id, parent_id=parent_id, is_leaf=1))
     return pandas.DataFrame.from_records(hierarchy_rows, columns=_Node._fields)
 
-  def membership_map(self):
-    """Returns group members after removing duplicates from ancestor groups."""
-    if self._group_to_members is None:
-      member_dict = {group_id: set(group.members())
-                     for group_id, group in self._group_dict.iteritems()}
-      processed_groups = set()
-      for group_id in self._group_dict:
-        self._update_ancestors(member_dict, group_id, processed_groups)
-
-      self._group_to_members = member_dict
-
-    return self._group_to_members
-
   def _group_display_id(self, group_id):
+    """Creates the ID to display for a group."""
     group = self._group_dict.get(group_id)
     if group is None:
       return group_id
     return '%s (%s)' % (group.display_name, group_id)
 
-  @staticmethod
-  def _resource_display_id(group_id, resource):
-    """Returns a unique ID for a resource and parent group combination"""
-    labels = ', '.join(resource.labels.itervalues())
-    return '%s: %s (%s)' % (resource.type, labels, group_id)
+  def _build_query(self, metric_type, offset='1h'):
+    """Builds a query object based on the metric_type and offset."""
+    from . import _query
 
-  def _update_ancestors(self, member_dict, current_group_id, processed_groups):
-    """Recursively update all ancestor groups of the current group."""
-    current_group = self._group_dict[current_group_id]
-    if not current_group.parent_name or current_group_id in processed_groups:
-      return
+    descriptor = self._client.fetch_metric_descriptor(metric_type)
+    if descriptor.value_type not in ['INT64', 'DOUBLE']:
+      raise ValueError('Only numeric metric types are supported')
 
-    # Recursively call the method on the ancestors.
-    parent_id = current_group.parent_id
-    self._update_ancestors(member_dict, parent_id, processed_groups)
+    if descriptor.metric_kind == 'CUMULATIVE':
+      alignment_method = 'ALIGN_DELTA'
+    else:
+      alignment_method = 'ALIGN_MEAN'
 
-    # Update the members of the parent by removing overlapping members.
-    member_dict[parent_id] -= member_dict[current_group_id]
-    processed_groups.add(current_group_id)
-
-
+    query = _query.Query(metric_type, project_id=self._project_id,
+                         context=self._context)
+    query = query.select_interval(offset=offset)
+    duration = (query._end_time - query._start_time).total_seconds()
+    query = query.align(alignment_method, seconds=int(duration))
+    query = query.reduce('REDUCE_MEAN', 'resource.project_id')
+    return query
