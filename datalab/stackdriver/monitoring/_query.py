@@ -254,6 +254,8 @@ def _get_timestamps(interval):
       end_time = curr_period_begin
       start_time = _subtract_offset(end_time, offset)
 
+  # Subtract one microsecond from start_time to include it in the interval.
+  start_time -= datetime.timedelta(microseconds=1)
   return start_time, end_time
 
 
