@@ -18,7 +18,6 @@ from builtins import object
 
 import collections
 import fnmatch
-import re
 
 import pandas
 
@@ -118,9 +117,12 @@ class Groups(object):
 
     dataframe = self._hierarchy(metric_type, offset).fillna(0)
     properties = dict(height=500, maxPostDepth=1,
-                      minColor='green', midColor='yellow', maxColor='red')
-    prop = re.sub(r'[\'{}]', '', str(properties)).replace(', ', '\n')
+                      minColor='green', maxColor='red')
+    if metric_type is not None:
+      properties['midColor'] = 'yellow'
 
+    prop = '\n'.join('%s: %s' % (key, value)
+                     for key, value in properties.iteritems())
     return datalab.utils.commands._chart._chart_cell({
         'chart': 'treemap',
         'data': dataframe,
@@ -135,11 +137,11 @@ class Groups(object):
 
     hierarchy_rows = [_Node(entity_id=self._project_id, parent_id=None,
                             size=0, metric=0)]
-    for group_id, group in self._group_dict.iteritems():
+    for group in self.list():
       parent_id = self._group_display_id(group.parent_id) or self._project_id
-      entity_id = self._group_display_id(group_id)
+      entity_id = self._group_display_id(group.group_id)
       if metric_type is not None:
-        dataframe = query.select_group(group_id).as_dataframe()
+        dataframe = query.select_group(group.group_id).as_dataframe()
         metric = dataframe.mean().mean()
       else:
         metric = 0
