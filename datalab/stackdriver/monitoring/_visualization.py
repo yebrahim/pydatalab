@@ -275,7 +275,7 @@ def plot_query_results(query_results, kind='linechart', partition_by=None,
       else:
         title = 'metric_type = %s' % query_results.metric_type
     else:
-      title = ', '.join(['%s = %r' % (k, v)
+      title = ', '.join(['%s = %s' % (k, v)
                          for k, v in zip(partition_by, _utils.listify(name))])
 
     # Call the appropriate visualization function.
