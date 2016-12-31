@@ -36,12 +36,24 @@ Module contents
 .. autoclass:: datalab.utils.Job
     :members:
 
-.. autoclass:: datalab.utils.RequestException
+.. autoclass:: JSONEncoder
     :members:
 
-.. autoclass:: datalab.utils.RequestException
+.. autoclass:: datalab.utils.LRUCache
     :members:
 
-.. autoclass:: datalab.utils.RequestException
+.. autoclass:: datalab.utils.LambdaJob
     :members:
+
+.. autofunction:: datalab.utils.print_exception_with_last_stack
+
+.. autofunction:: datalab.utils.get_item
+
+.. autofunction:: datalab.utils.compare_datetimes
+
+.. autofunction:: datalab.utils.pick_unused_port
+
+.. autofunction:: datalab.utils.is_http_running_on
+
+.. autofunction:: datalab.utils.gcs_copy_file
 
