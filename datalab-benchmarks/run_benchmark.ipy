@@ -1,0 +1,37 @@
+import google.datalab.bigquery as bq
+import time
+
+table_prefix = 'bigquery-public-data.noaa_gsod.gsod'
+table_suffixes = [
+  '1929',
+  '1930',
+  '1933',
+  '1936',
+  '1939',
+  #'1940',
+  #'1941',
+  #'1943',
+  #'1944'
+]
+
+bq.Table._DEFAULT_PAGE_SIZE = 1024
+print('DEFAULT_PAGE_SIZE: ' + str(bq.Table._DEFAULT_PAGE_SIZE))
+
+for suffix in table_suffixes:
+  name = table_prefix + suffix
+  timestart = time.time()
+  df = bq.Table(name).to_dataframe()
+  timeend = time.time()
+
+  print('Table ' + name + ' finished with ' + str(df.size) + ' records. Wall time: ' + str(timeend - timestart) + ' s')
+
+bq.Table._DEFAULT_PAGE_SIZE = 1024 * 100
+print('DEFAULT_PAGE_SIZE: ' + str(bq.Table._DEFAULT_PAGE_SIZE))
+
+for suffix in table_suffixes:
+  name = table_prefix + suffix
+  timestart = time.time()
+  df = bq.Table(name).to_dataframe()
+  timeend = time.time()
+
+  print('Table ' + name + ' finished with ' + str(df.size) + ' records. Wall time: ' + str(timeend - timestart) + ' s')

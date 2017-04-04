@@ -27,6 +27,7 @@ import time
 import traceback
 import uuid
 import sys
+import time
 
 import google.datalab
 import google.datalab.utils
@@ -104,7 +105,7 @@ class Table(object):
   _VALID_COLUMN_NAME_CHARACTERS = '_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
   # When fetching table contents, the max number of rows to fetch per HTTP request
-  _DEFAULT_PAGE_SIZE = 1024
+  _DEFAULT_PAGE_SIZE = 1025 * 1024
 
   # Milliseconds per week
   _MSEC_PER_WEEK = 7 * 24 * 3600 * 1000
@@ -599,16 +600,27 @@ class Table(object):
     count = 0
     page_token = None
     df = None
+    pages = 0
+    start = time.time()
+    pagetimesum = 0
     while True:
+      pagetimestart = time.time()
       page_rows, page_token = fetcher(page_token, count)
       if len(page_rows):
         count += len(page_rows)
+        pages += 1
         if df is None:
           df = pandas.DataFrame.from_records(page_rows)
         else:
           df = df.append(page_rows, ignore_index=True)
+      pagetimeend = time.time()
+      pagetimesum += pagetimeend - pagetimestart
       if not page_token:
         break
+    end = time.time()
+    print(str(pages) + ' pages used to get the data')
+    print('average page fetch time: ' + str(pagetimesum / pages))
+    print('to_dataframe operation took: ' + str(end-start) + ' seconds')
 
     # Need to reorder the dataframe to preserve column ordering
     ordered_fields = [field.name for field in self.schema]
